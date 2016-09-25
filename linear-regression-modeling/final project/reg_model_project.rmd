@@ -1,0 +1,727 @@
+---
+title: "Modeling and prediction for movies"
+output: 
+  html_document: 
+    fig_height: 4
+    highlight: pygments
+    theme: spacelab
+---
+
+## Setup
+
+### Load packages
+
+```{r load-packages, message = FALSE}
+library(statsr)
+library(ggplot2)
+library(dplyr)
+```
+
+### Load data
+
+Make sure your data and R Markdown files are in the same directory. When loaded
+your data file will be called `movies`. Delete this note when before you submit 
+your work. 
+
+```{r load-data}
+setwd(dir = "C:/Users/Khémon/Documents/R/stats-coursera/linear-regression-modeling/final project")
+load("movies.Rdata")
+```
+
+
+* * *
+
+## Part 1: Data
+
+Data: (3 points) Describe how the observations in the sample are collected, and the implications of this data collection method on the scope of inference (generalizability / causality).
+
+According to the codebook, the data set is comprised of 651 randomly sampled movies produced and released before 2016.
+
+Random sampling : the assesment conclusions will be generalizable ! 
+If it's a random assesment, conclusions will be both causal and generalizable
+We will not be able to conclude causation if our assesment is not random;
+
+* * *
+
+## Part 2: Research question
+What are the main variables explaining the success of a given movie. 
+By determining what are the main variable associated to a movie success we would be able to predict for a new movie what is its expected success (audiance score).
+
+* * *
+
+## Part 3: Exploratory data analysis
+
+NOTE: Insert code chunks as needed by clicking on the "Insert a new code chunk" 
+button above. Make sure that your code is visible in the project you submit. 
+Delete this note when before you submit your work.
+
+We first want to explore our data, and see what is the distribution of movies by genre
+```{r movies genre histogram }
+plot(movies$genre)
+#mosaicplot(movies$thtr_rel_year ~ movies$genre)
+```
+Most of movies (almost 50%) are from the "Drama" genre. 
+Then, come "Comedy", "Action & Adventure" and "Mystery & Suspense". 
+
+We continue exploring different caracteristics of movie, looking at runtimes
+```{r movies runtime }
+hist(movies$runtime)
+
+```
+A typical movie last form 90 min to 120
+
+Same for imdb ratings
+```{r imdb rating distr}
+#scatter plot
+plot(movies$imdb_rating)
+# distribution
+hist(movies$imdb_rating)
+# box plot
+boxplot(movies$imdb_rating)
+# imdb rating summary
+summary(movies$imdb_rating)
+```
+50% are in a range  between 5.9 (1st qt) and 7.3 (3rd qt)
+
+Number of votes imdb 
+```{r imdb rating distr}
+plot(movies$imdb_num_votes)
+hist(movies$imdb_num_votes)
+```
+
+Imdb ratings distribution is left skewed 
+Evolution of rating througout time (year of theater)
+```{r imdb rating plot  evol}
+# distribution
+ggplot(data=movies, aes(x=thtr_rel_year, y=imdb_rating)) + geom_point()
+
+ggplot(data=movies, aes(x=thtr_rel_year, y=imdb_rating)) + geom_jitter()
+
+ggplot(data=movies, aes(x=thtr_rel_year, y=imdb_rating)) + geom_jitter() + geom_line(method = lm)
+
+```
+The line of linear regression seems to demonstrate the slope is almost 0 so that there appears to be no linear correlation between the year and ratings. 
+
+
+Critics score:
+```{r critics score by drama }
+plot(movies$critics_score)
+boxplot(movies$critics_score)
+ggplot(data = movies, aes(x=genre, y = critics_score)) + geom_point()
+```
+
+
+audience score:
+```{r audience score}
+plot(movies$audience_score)
+ggplot(data = movies, aes(x=genre, y = audience_score)) + geom_point()
+
+```
+
+
+audience rating:
+```{r audience rating }
+plot(movies$audience_rating)
+
+```
+
+
+
+
+* * *
+
+## Part 4: Modeling
+Develop a multiple linear regression model to predict a numerical variable in the dataset. The response variable and the explanatory variables can be existing variables in the dataset, or new variables you create based on existing variables.
+
+response variable: audiance_score
+
+explatory variables: 
+
+title_type: Type of movie (Documentary, Feature Film, TV Movie)
+genre: Genre of movie (Action & Adventure, Comedy, Documentary, Drama, Horror, Mystery & Suspense, Other)
+runtime: Runtime of movie (in minutes)
+mpaa_rating: MPAA rating of the movie (G, PG, PG-13, R, Unrated)
+studio: Studio that produced the movie
+thtr_rel_year: Year the movie is released in theaters
+
+dvd_rel_year: Year the movie is released on DVD
+
+imdb_rating: Rating on IMDB
+imdb_num_votes: Number of votes on IMDB
+critics_rating: Categorical variable for critics rating on Rotten Tomatoes (Certified Fresh, Fresh, Rotten)
+critics_score: Critics score on Rotten Tomatoes
+audience_score: Audience score on Rotten Tomatoes
+best_pic_nom: Whether or not the movie was nominated for a best picture Oscar (no, yes)
+best_pic_win: Whether or not the movie won a best picture Oscar (no, yes)
+best_actor_win: Whether or not one of the main actors in the movie ever won an Oscar (no, yes) - note that this is not necessarily whether the actor won an Oscar for their role in the given movie
+best_actress win: Whether or not one of the main actresses in the movie ever won an Oscar (no, yes) - not that this is not necessarily whether the actresses won an Oscar for their role in the given movie
+best_dir_win: Whether or not the director of the movie ever won an Oscar (no, yes) - not that this is not necessarily whether the director won an Oscar for the given movie
+top200_box: Whether or not the movie is in the Top 200 Box Office list on BoxOfficeMojo (no, yes)
+
+
+We removed following variables from the model:
+audience_rating: Categorical variable for audience rating on Rotten Tomatoes (Spilled, Upright)
+director: Director of the movie
+actor1-actor5: List of first 5 main actors in the movie (abridged cast), this information was used to determine whether the movie casts an actor or actress who won a best actor or actress Oscar
+rt_url: Link to Rotten Tomatoes page for the movie
+imdb_url: Link to IMDB page for the movie
+imdb_id: IMDB ID of the movie
+thtr_rel_month: Month the movie is released in theaters
+thtr_rel_day: Day of the month the movie is released in theaters
+dvd_rel_month: Month the movie is released on DVD
+dvd_rel_day: Day of the month the movie is released on DVD
+
+```{r full linear model}
+
+mfull = lm(data = movies, audience_score~ title_type+genre+runtime+mpaa_rating+studio+thtr_rel_year+thtr_rel_month+thtr_rel_day+dvd_rel_year+dvd_rel_month+dvd_rel_day+imdb_rating+imdb_num_votes+critics_rating+critics_score+audience_rating+best_pic_nom+best_pic_win+best_actor_win+best_actress_win+best_dir_win+top200_box)
+
+summary(mfull)
+```
+
+Excluding variables: 
+
+```{r colinearity test with imdb rating}
+ggplot(data = movies, aes(x=imdb_rating, y = audience_score)) + geom_point() + geom_smooth(method= lm)
+cor(movies$imdb_rating, movies$audiance_score)
+test = lm(audience_score ~ imdb_rating, data = movies)
+summary(test)
+```
+imdb_rating has really strong correlation with the 
+
+same goes for audience_rating.
+
+Analysis of collinearity on critics score
+```{r colinearity test with imdb rating}
+ggplot(data = movies, aes(x=critics_score, y = audience_score)) + geom_point() + geom_smooth(method= lm)
+cor(movies$critics_score, movies$audience_score)
+test = lm(audience_score ~ critics_score, data = movies)
+summary(test)
+```
+Critics score is also strongly correlated with audience_score
+
+
+We remove those 3 variables from the model.
+studio: we chose to remove this variable also. The slope of each studio
+The slope is really low. So we can say that it's not significant, and we rather have a more simple model. 
+We can remove also the number of votes (imdb) as it don't seem to bring any more information to the table 
+```{r linear model}
+
+mfull = lm(data = movies, audience_score~ title_type+genre+runtime+mpaa_rating
+           +thtr_rel_year+dvd_rel_year+best_pic_nom+best_pic_win+best_actor_win+best_actress_win+best_dir_win+top200_box)
+
+summary(mfull)
+```
+
+Let's create another data frame which is a subset of movies data frame, that contains only variables that will be used in our analysis. 
+
+```{r}
+ movies_small = movies[, c("audience_score", "title_type","genre","runtime",                           "mpaa_rating","studio","thtr_rel_year","dvd_rel_year","imdb_rating","imdb_num_votes","critics_rating","critics_score","audience_rating","best_pic_nom","best_pic_win","best_actor_win","best_actress_win","best_dir_win","top200_box")]
+```
+
+
+
+```{r}
+
+#Full model
+full_model = lm (audience_score ~ title_type+genre+runtime+mpaa_rating+studio+thtr_rel_year+dvd_rel_year+imdb_rating+imdb_num_votes+critics_rating+critics_score+audience_rating+best_pic_nom+best_pic_win+best_actor_win+best_actress_win+best_dir_win+top200_box, data=movies_small)
+#summary full model R squared = 0.885
+summary(full_model)
+
+r.squared = c()
+
+# m1 remove title_type
+m1 = lm(audience_score ~ genre+runtime+mpaa_rating+studio+thtr_rel_year+dvd_rel_year+imdb_rating+imdb_num_votes+critics_rating+critics_score+audience_rating+best_pic_nom+best_pic_win+best_actor_win+best_actress_win+best_dir_win+top200_box, data=movies_small)
+r.squared['title_type'] = summary(m1)$adj.r.squared
+
+
+# m2 remove genre
+m2 = lm(audience_score ~ title_type+runtime+mpaa_rating+studio+thtr_rel_year+dvd_rel_year+imdb_rating+imdb_num_votes+critics_rating+critics_score+audience_rating+best_pic_nom+best_pic_win+best_actor_win+best_actress_win+best_dir_win+top200_box, data=movies_small)
+r.squared['genre'] = summary(m2)$adj.r.squared
+
+# remove runtime
+m3 = lm(audience_score ~ title_type+genre+mpaa_rating+studio+thtr_rel_year+dvd_rel_year+imdb_rating+imdb_num_votes+critics_rating+critics_score+audience_rating+best_pic_nom+best_pic_win+best_actor_win+best_actress_win+best_dir_win+top200_box, data=movies_small)
+r.squared['runtime'] = summary(m3)$adj.r.squared
+
+
+# remove imdb rating
+m4 = lm(audience_score ~ title_type+genre+runtime+studio+thtr_rel_year+dvd_rel_year+imdb_num_votes+critics_rating+critics_score+audience_rating+best_pic_nom+best_pic_win+best_actor_win+best_actress_win+best_dir_win+top200_box, data=movies_small)
+r.squared['imdb_rating'] = summary(m4)$adj.r.squared
+
+# remove imdb num votes
+m5 = lm(audience_score ~ title_type+genre+runtime+studio+thtr_rel_year+dvd_rel_year+imdb_rating+critics_rating+critics_score+audience_rating+best_pic_nom+best_pic_win+best_actor_win+best_actress_win+best_dir_win+top200_box, data=movies_small)
+r.squared['imdb_num_votes'] <- summary(m5)$adj.r.squared
+
+# remove audience_rating
+m6 = lm(audience_score ~ title_type+genre+runtime+studio+thtr_rel_year+dvd_rel_year+imdb_rating+imdb_num_votes+critics_rating+critics_score+best_pic_nom+best_pic_win+best_actor_win+best_actress_win+best_dir_win+top200_box, data=movies_small)
+r.squared['audience_rating'] = summary(m6)$adj.r.squared
+
+# remove audience_rating
+m7 = lm(audience_score ~ title_type+genre+runtime+studio+thtr_rel_year+dvd_rel_year+imdb_rating+imdb_num_votes+audience_rating+critics_rating+best_pic_nom+best_pic_win+best_actor_win+best_actress_win+best_dir_win+top200_box, data=movies_small)
+r.squared['audience_rating'] = summary(m7)$adj.r.squared
+
+
+# remove critics_rating
+m8 = lm(audience_score ~ title_type+genre+runtime+studio+thtr_rel_year+dvd_rel_year+imdb_rating+imdb_num_votes+audience_rating+best_pic_nom+best_pic_win+best_actor_win+best_actress_win+best_dir_win+top200_box, data=movies_small)
+r.squared['critics_rating'] = summary(m8)$adj.r.squared
+
+
+# remove best_actor_win
+m9 = lm(audience_score ~ title_type+genre+runtime+studio+thtr_rel_year+dvd_rel_year+imdb_rating+imdb_num_votes+audience_rating+critics_rating+best_pic_nom+best_pic_win+best_actress_win+best_dir_win+top200_box, data=movies_small)
+r.squared['best_actor_win'] = summary(m9)$adj.r.squared
+
+# remove best_pic_nom
+m10 = lm(audience_score ~ title_type+genre+runtime+studio+thtr_rel_year+dvd_rel_year+imdb_rating+imdb_num_votes+audience_rating+critics_rating+best_actor_win+best_pic_win+best_actress_win+best_dir_win+top200_box, data=movies_small)
+r.squared['best_pic_nom'] = summary(m10)$adj.r.squared
+
+which(r.squared == max(r.squared))
+
+```
+We remove the critics rating 
+
+```{r}
+
+#we update model target with model without critics rating
+model_cible = m8
+#summary full model R squared = 0.8855
+summary(model_cible)
+
+r.squared = c()
+
+# m1 remove title_type
+m1 = lm(audience_score ~ genre+runtime+mpaa_rating+studio+thtr_rel_year+dvd_rel_year+imdb_rating+imdb_num_votes+critics_score+audience_rating+best_pic_nom+best_pic_win+best_actor_win+best_actress_win+best_dir_win+top200_box, data=movies_small)
+r.squared['title_type'] = summary(m1)$adj.r.squared
+
+
+# m2 remove genre
+m2 = lm(audience_score ~ title_type+runtime+mpaa_rating+studio+thtr_rel_year+dvd_rel_year+imdb_rating+imdb_num_votes+critics_score+audience_rating+best_pic_nom+best_pic_win+best_actor_win+best_actress_win+best_dir_win+top200_box, data=movies_small)
+r.squared['genre'] = summary(m2)$adj.r.squared
+
+# remove runtime
+m3 = lm(audience_score ~ title_type+genre+mpaa_rating+studio+thtr_rel_year+dvd_rel_year+imdb_rating+imdb_num_votes+critics_score+audience_rating+best_pic_nom+best_pic_win+best_actor_win+best_actress_win+best_dir_win+top200_box, data=movies_small)
+r.squared['runtime'] = summary(m3)$adj.r.squared
+
+
+# remove imdb rating
+m4 = lm(audience_score ~ title_type+genre+runtime+studio+thtr_rel_year+dvd_rel_year+imdb_num_votes+critics_score+audience_rating+best_pic_nom+best_pic_win+best_actor_win+best_actress_win+best_dir_win+top200_box, data=movies_small)
+r.squared['imdb_rating'] = summary(m4)$adj.r.squared
+
+# remove imdb num votes
+m5 = lm(audience_score ~ title_type+genre+runtime+studio+thtr_rel_year+dvd_rel_year+imdb_rating+critics_score+audience_rating+best_pic_nom+best_pic_win+best_actor_win+best_actress_win+best_dir_win+top200_box, data=movies_small)
+r.squared['imdb_num_votes'] <- summary(m5)$adj.r.squared
+
+# remove audience_rating
+m6 = lm(audience_score ~ title_type+genre+runtime+studio+thtr_rel_year+dvd_rel_year+imdb_rating+imdb_num_votes+critics_score+best_pic_nom+best_pic_win+best_actor_win+best_actress_win+best_dir_win+top200_box, data=movies_small)
+r.squared['audience_rating'] = summary(m6)$adj.r.squared
+
+# remove audience_rating
+m7 = lm(audience_score ~ title_type+genre+runtime+studio+thtr_rel_year+dvd_rel_year+imdb_rating+imdb_num_votes+audience_rating+best_pic_nom+best_pic_win+best_actor_win+best_actress_win+best_dir_win+top200_box, data=movies_small)
+r.squared['audience_rating'] = summary(m7)$adj.r.squared
+
+
+
+# remove best_actor_win
+m9 = lm(audience_score ~ title_type+genre+runtime+studio+thtr_rel_year+dvd_rel_year+imdb_rating+imdb_num_votes+audience_rating+best_pic_nom+best_pic_win+best_actress_win+best_dir_win+top200_box, data=movies_small)
+r.squared['best_actor_win'] = summary(m9)$adj.r.squared
+
+# remove best_pic_nom
+m10 = lm(audience_score ~ title_type+genre+runtime+studio+thtr_rel_year+dvd_rel_year+imdb_rating+imdb_num_votes+audience_rating+best_actor_win+best_pic_win+best_actress_win+best_dir_win+top200_box, data=movies_small)
+r.squared['best_pic_nom'] = summary(m10)$adj.r.squared
+
+# remove best_actress_win
+m11 = lm(audience_score ~ title_type+genre+runtime+studio+thtr_rel_year+dvd_rel_year+imdb_rating+imdb_num_votes+audience_rating+best_actor_win+best_pic_nom+best_pic_win+best_dir_win+top200_box, data=movies_small)
+r.squared['best_actress_win'] = summary(m11)$adj.r.squared
+
+# remove best_dir_win
+m12 = lm(audience_score ~ title_type+genre+runtime+studio+thtr_rel_year+dvd_rel_year+imdb_rating+imdb_num_votes+audience_rating+best_actor_win+best_pic_nom+best_pic_win+best_actress_win+top200_box, data=movies_small)
+r.squared['best_dir_win'] = summary(m12)$adj.r.squared
+
+# remove top200_box
+m13 = lm(audience_score ~ title_type+genre+runtime+studio+thtr_rel_year+dvd_rel_year+imdb_rating+imdb_num_votes+audience_rating+best_actor_win+best_pic_nom+best_pic_win+best_actress_win+best_dir_win, data=movies_small)
+r.squared['best_dir_win'] = summary(m13)$adj.r.squared
+
+which(r.squared == max(r.squared))
+
+```
+We remove best dir win
+
+```{r}
+#we update model target with model without best director win
+model_cible = m12
+#summary full model R squared = 0.8855
+summary(model_cible)
+
+
+r.squared = c()
+
+# m1 remove title_type
+m1 = lm(audience_score ~ genre+runtime+mpaa_rating+studio+thtr_rel_year+dvd_rel_year+imdb_rating+imdb_num_votes+critics_score+audience_rating+best_pic_nom+best_pic_win+best_actor_win+best_actress_win+top200_box, data=movies_small)
+r.squared['title_type'] = summary(m1)$adj.r.squared
+
+
+# m2 remove genre
+m2 = lm(audience_score ~ title_type+runtime+mpaa_rating+studio+thtr_rel_year+dvd_rel_year+imdb_rating+imdb_num_votes+critics_score+audience_rating+best_pic_nom+best_pic_win+best_actor_win+best_actress_win+top200_box, data=movies_small)
+r.squared['genre'] = summary(m2)$adj.r.squared
+
+# remove runtime
+m3 = lm(audience_score ~ title_type+genre+mpaa_rating+studio+thtr_rel_year+dvd_rel_year+imdb_rating+imdb_num_votes+critics_score+audience_rating+best_pic_nom+best_pic_win+best_actor_win+best_actress_win+top200_box, data=movies_small)
+r.squared['runtime'] = summary(m3)$adj.r.squared
+
+
+# remove imdb rating
+m4 = lm(audience_score ~ title_type+genre+runtime+studio+thtr_rel_year+dvd_rel_year+imdb_num_votes+critics_score+audience_rating+best_pic_nom+best_pic_win+best_actor_win+best_actress_win+top200_box, data=movies_small)
+r.squared['imdb_rating'] = summary(m4)$adj.r.squared
+
+# remove imdb num votes
+m5 = lm(audience_score ~ title_type+genre+runtime+studio+thtr_rel_year+dvd_rel_year+imdb_rating+critics_score+audience_rating+best_pic_nom+best_pic_win+best_actor_win+best_actress_win+top200_box, data=movies_small)
+r.squared['imdb_num_votes'] <- summary(m5)$adj.r.squared
+
+# remove audience_rating
+m6 = lm(audience_score ~ title_type+genre+runtime+studio+thtr_rel_year+dvd_rel_year+imdb_rating+imdb_num_votes+critics_score+best_pic_nom+best_pic_win+best_actor_win+best_actress_win+top200_box, data=movies_small)
+r.squared['audience_rating'] = summary(m6)$adj.r.squared
+
+# remove audience_rating
+m7 = lm(audience_score ~ title_type+genre+runtime+studio+thtr_rel_year+dvd_rel_year+imdb_rating+imdb_num_votes+audience_rating+best_pic_nom+best_pic_win+best_actor_win+best_actress_win+top200_box, data=movies_small)
+r.squared['audience_rating'] = summary(m7)$adj.r.squared
+
+
+
+# remove best_actor_win
+m9 = lm(audience_score ~ title_type+genre+runtime+studio+thtr_rel_year+dvd_rel_year+imdb_rating+imdb_num_votes+audience_rating+best_pic_nom+best_pic_win+best_actress_win+top200_box, data=movies_small)
+r.squared['best_actor_win'] = summary(m9)$adj.r.squared
+
+# remove best_pic_nom
+m10 = lm(audience_score ~ title_type+genre+runtime+studio+thtr_rel_year+dvd_rel_year+imdb_rating+imdb_num_votes+audience_rating+best_actor_win+best_pic_win+best_actress_win+top200_box, data=movies_small)
+r.squared['best_pic_nom'] = summary(m10)$adj.r.squared
+
+# remove best_actress_win
+m11 = lm(audience_score ~ title_type+genre+runtime+studio+thtr_rel_year+dvd_rel_year+imdb_rating+imdb_num_votes+audience_rating+best_actor_win+best_pic_nom+best_pic_win+top200_box, data=movies_small)
+r.squared['best_actress_win'] = summary(m11)$adj.r.squared
+
+
+# remove top200_box
+m13 = lm(audience_score ~ title_type+genre+runtime+studio+thtr_rel_year+dvd_rel_year+imdb_rating+imdb_num_votes+audience_rating+best_actor_win+best_pic_nom+best_pic_win+best_actress_win+best_dir_win, data=movies_small)
+r.squared['best_dir_win'] = summary(m13)$adj.r.squared
+
+which(r.squared == max(r.squared))
+
+```
+We remove best actor win
+
+
+```{r}
+#we update model target with model without best actor
+model_cible = m11
+#summary full model R squared = 0.8855
+summary(model_cible)
+
+
+r.squared = c()
+
+# m1 remove title_type
+m1 = lm(audience_score ~ genre+runtime+mpaa_rating+studio+thtr_rel_year+dvd_rel_year+imdb_rating+imdb_num_votes+critics_score+audience_rating+best_pic_nom+best_pic_win+best_actress_win+top200_box, data=movies_small)
+r.squared['title_type'] = summary(m1)$adj.r.squared
+
+
+# m2 remove genre
+m2 = lm(audience_score ~ title_type+runtime+mpaa_rating+studio+thtr_rel_year+dvd_rel_year+imdb_rating+imdb_num_votes+critics_score+audience_rating+best_pic_nom+best_pic_win+best_actress_win+top200_box, data=movies_small)
+r.squared['genre'] = summary(m2)$adj.r.squared
+
+# remove runtime
+m3 = lm(audience_score ~ title_type+genre+mpaa_rating+studio+thtr_rel_year+dvd_rel_year+imdb_rating+imdb_num_votes+critics_score+audience_rating+best_pic_nom+best_pic_win+best_actress_win+top200_box, data=movies_small)
+r.squared['runtime'] = summary(m3)$adj.r.squared
+
+
+# remove imdb rating
+m4 = lm(audience_score ~ title_type+genre+runtime+studio+thtr_rel_year+dvd_rel_year+imdb_num_votes+critics_score+audience_rating+best_pic_nom+best_pic_win+best_actress_win+top200_box, data=movies_small)
+r.squared['imdb_rating'] = summary(m4)$adj.r.squared
+
+# remove imdb num votes
+m5 = lm(audience_score ~ title_type+genre+runtime+studio+thtr_rel_year+dvd_rel_year+imdb_rating+critics_score+audience_rating+best_pic_nom+best_pic_win+best_actress_win+top200_box, data=movies_small)
+r.squared['imdb_num_votes'] <- summary(m5)$adj.r.squared
+
+# remove audience_rating
+m6 = lm(audience_score ~ title_type+genre+runtime+studio+thtr_rel_year+dvd_rel_year+imdb_rating+imdb_num_votes+critics_score+best_pic_nom+best_pic_win+best_actress_win+top200_box, data=movies_small)
+r.squared['audience_rating'] = summary(m6)$adj.r.squared
+
+# remove critics_score
+m7 = lm(audience_score ~ title_type+genre+runtime+studio+thtr_rel_year+dvd_rel_year+imdb_rating+imdb_num_votes+audience_rating+best_pic_nom+best_pic_win+best_actress_win+top200_box, data=movies_small)
+r.squared['critics_score'] = summary(m7)$adj.r.squared
+
+
+
+# remove best_pic_nom
+m9 = lm(audience_score ~ title_type+genre+runtime+studio+thtr_rel_year+dvd_rel_year+imdb_rating+imdb_num_votes+critics_score+audience_rating+best_pic_win+best_actress_win+top200_box, data=movies_small)
+r.squared['best_pic_nom'] = summary(m9)$adj.r.squared
+
+# remove best_pic_win
+m10 = lm(audience_score ~ title_type+genre+runtime+studio+thtr_rel_year+dvd_rel_year+imdb_rating+imdb_num_votes+audience_rating+best_pic_nom+best_actress_win+top200_box, data=movies_small)
+r.squared['best_pic_win'] = summary(m10)$adj.r.squared
+
+# remove best_actress_win
+m11 = lm(audience_score ~ title_type+genre+runtime+studio+thtr_rel_year+dvd_rel_year+imdb_rating+imdb_num_votes+audience_rating+best_pic_nom+best_pic_win+top200_box, data=movies_small)
+r.squared['best_actress_win'] = summary(m11)$adj.r.squared
+
+
+# remove top200_box
+m13 = lm(audience_score ~ title_type+genre+runtime+studio+thtr_rel_year+dvd_rel_year+imdb_rating+imdb_num_votes+audience_rating+best_pic_nom+best_pic_win+best_actress_win+best_dir_win, data=movies_small)
+r.squared['top200_box'] = summary(m13)$adj.r.squared
+
+which(r.squared == max(r.squared))
+```
+We remove best_pic_win
+
+```{r}
+#we update model target with model without best pic win
+model_cible = m10
+#summary full model R squared = 0.8855
+summary(model_cible)
+
+
+r.squared = c()
+
+# m1 remove title_type
+m1 = lm(audience_score ~ genre+runtime+mpaa_rating+studio+thtr_rel_year+dvd_rel_year+imdb_rating+imdb_num_votes+critics_score+audience_rating+best_pic_nom+best_actress_win+top200_box, data=movies_small)
+r.squared['title_type'] = summary(m1)$adj.r.squared
+
+
+# m2 remove genre
+m2 = lm(audience_score ~ title_type+runtime+mpaa_rating+studio+thtr_rel_year+dvd_rel_year+imdb_rating+imdb_num_votes+critics_score+audience_rating+best_pic_nom+best_actress_win+top200_box, data=movies_small)
+r.squared['genre'] = summary(m2)$adj.r.squared
+
+# remove runtime
+m3 = lm(audience_score ~ title_type+genre+mpaa_rating+studio+thtr_rel_year+dvd_rel_year+imdb_rating+imdb_num_votes+critics_score+audience_rating+best_pic_nom+best_actress_win+top200_box, data=movies_small)
+r.squared['runtime'] = summary(m3)$adj.r.squared
+
+
+# remove imdb rating
+m4 = lm(audience_score ~ title_type+genre+runtime+studio+thtr_rel_year+dvd_rel_year+imdb_num_votes+critics_score+audience_rating+best_pic_nom+best_actress_win+top200_box, data=movies_small)
+r.squared['imdb_rating'] = summary(m4)$adj.r.squared
+
+# remove imdb num votes
+m5 = lm(audience_score ~ title_type+genre+runtime+studio+thtr_rel_year+dvd_rel_year+imdb_rating+critics_score+audience_rating+best_pic_nom+best_actress_win+top200_box, data=movies_small)
+r.squared['imdb_num_votes'] <- summary(m5)$adj.r.squared
+
+# remove audience_rating
+m6 = lm(audience_score ~ title_type+genre+runtime+studio+thtr_rel_year+dvd_rel_year+imdb_rating+imdb_num_votes+critics_score+best_pic_nom+best_actress_win+top200_box, data=movies_small)
+r.squared['audience_rating'] = summary(m6)$adj.r.squared
+
+# remove critics_score
+m7 = lm(audience_score ~ title_type+genre+runtime+studio+thtr_rel_year+dvd_rel_year+imdb_rating+imdb_num_votes+audience_rating+best_pic_nom+best_actress_win+top200_box, data=movies_small)
+r.squared['critics_score'] = summary(m7)$adj.r.squared
+
+
+# remove best_pic_nom
+m9 = lm(audience_score ~ title_type+genre+runtime+studio+thtr_rel_year+dvd_rel_year+imdb_rating+imdb_num_votes+critics_score+audience_rating+best_actress_win+top200_box, data=movies_small)
+r.squared['best_pic_nom'] = summary(m9)$adj.r.squared
+
+
+# remove best_actress_win
+m11 = lm(audience_score ~ title_type+genre+runtime+studio+thtr_rel_year+dvd_rel_year+imdb_rating+imdb_num_votes+audience_rating+best_pic_nom+top200_box, data=movies_small)
+r.squared['best_actress_win'] = summary(m11)$adj.r.squared
+
+
+# remove top200_box
+m13 = lm(audience_score ~ title_type+genre+runtime+studio+thtr_rel_year+dvd_rel_year+imdb_rating+imdb_num_votes+audience_rating+best_pic_nom+best_actress_win+best_dir_win, data=movies_small)
+r.squared['top200_box'] = summary(m13)$adj.r.squared
+
+which(r.squared == max(r.squared))
+r.squared
+
+```
+
+We remove top200_box
+
+```{r}
+#we update model target with model without top200_box
+model_cible = m13
+#summary full model R squared = 0.886
+summary(model_cible)
+
+
+r.squared = c()
+
+# m1 remove title_type
+m1 = lm(audience_score ~ genre+runtime+mpaa_rating+studio+thtr_rel_year+dvd_rel_year+imdb_rating+imdb_num_votes+critics_score+audience_rating+best_pic_nom+best_actress_win, data=movies_small)
+r.squared['title_type'] = summary(m1)$adj.r.squared
+
+
+# m2 remove genre
+m2 = lm(audience_score ~ title_type+runtime+mpaa_rating+studio+thtr_rel_year+dvd_rel_year+imdb_rating+imdb_num_votes+critics_score+audience_rating+best_pic_nom+best_actress_win, data=movies_small)
+r.squared['genre'] = summary(m2)$adj.r.squared
+
+# remove runtime
+m3 = lm(audience_score ~ title_type+genre+mpaa_rating+studio+thtr_rel_year+dvd_rel_year+imdb_rating+imdb_num_votes+critics_score+audience_rating+best_pic_nom+best_actress_win, data=movies_small)
+r.squared['runtime'] = summary(m3)$adj.r.squared
+
+
+# remove imdb rating
+m4 = lm(audience_score ~ title_type+genre+runtime+studio+thtr_rel_year+dvd_rel_year+imdb_num_votes+critics_score+audience_rating+best_pic_nom+best_actress_win, data=movies_small)
+r.squared['imdb_rating'] = summary(m4)$adj.r.squared
+
+# remove imdb num votes
+m5 = lm(audience_score ~ title_type+genre+runtime+studio+thtr_rel_year+dvd_rel_year+imdb_rating+critics_score+audience_rating+best_pic_nom+best_actress_win, data=movies_small)
+r.squared['imdb_num_votes'] <- summary(m5)$adj.r.squared
+
+# remove audience_rating
+m6 = lm(audience_score ~ title_type+genre+runtime+studio+thtr_rel_year+dvd_rel_year+imdb_rating+imdb_num_votes+critics_score+best_pic_nom+best_actress_win, data=movies_small)
+r.squared['audience_rating'] = summary(m6)$adj.r.squared
+
+# remove critics_score
+m7 = lm(audience_score ~ title_type+genre+runtime+studio+thtr_rel_year+dvd_rel_year+imdb_rating+imdb_num_votes+audience_rating+best_pic_nom+best_actress_win, data=movies_small)
+r.squared['critics_score'] = summary(m7)$adj.r.squared
+
+
+# remove best_pic_nom
+m9 = lm(audience_score ~ title_type+genre+runtime+studio+thtr_rel_year+dvd_rel_year+imdb_rating+imdb_num_votes+critics_score+audience_rating+best_actress_win, data=movies_small)
+r.squared['best_pic_nom'] = summary(m9)$adj.r.squared
+
+
+# remove best_actress_win
+m11 = lm(audience_score ~ title_type+genre+runtime+studio+thtr_rel_year+dvd_rel_year+imdb_rating+imdb_num_votes+audience_rating+best_pic_nom, data=movies_small)
+r.squared['best_actress_win'] = summary(m11)$adj.r.squared
+
+
+
+which(r.squared == max(r.squared))
+r.squared
+
+```
+We remove imdb_num_votes 
+
+```{r}
+#we update model target with model without imdb votes
+model_cible = m5
+#summary full model R squared = 0.886
+summary(model_cible)
+
+
+r.squared = c()
+
+# m1 remove title_type
+m1 = lm(audience_score ~ genre+runtime+mpaa_rating+studio+thtr_rel_year+dvd_rel_year+imdb_rating+critics_score+audience_rating+best_pic_nom+best_actress_win, data=movies_small)
+r.squared['title_type'] = summary(m1)$adj.r.squared
+
+
+# m2 remove genre
+m2 = lm(audience_score ~ title_type+runtime+mpaa_rating+studio+thtr_rel_year+dvd_rel_year+imdb_rating+critics_score+audience_rating+best_pic_nom+best_actress_win, data=movies_small)
+r.squared['genre'] = summary(m2)$adj.r.squared
+
+# remove runtime
+m3 = lm(audience_score ~ title_type+genre+mpaa_rating+studio+thtr_rel_year+dvd_rel_year+imdb_rating+critics_score+audience_rating+best_pic_nom+best_actress_win, data=movies_small)
+r.squared['runtime'] = summary(m3)$adj.r.squared
+
+
+# remove imdb rating
+m4 = lm(audience_score ~ title_type+genre+runtime+studio+thtr_rel_year+dvd_rel_year+critics_score+audience_rating+best_pic_nom+best_actress_win, data=movies_small)
+r.squared['imdb_rating'] = summary(m4)$adj.r.squared
+
+# remove audience_rating
+m6 = lm(audience_score ~ title_type+genre+runtime+studio+thtr_rel_year+dvd_rel_year+imdb_rating+critics_score+best_pic_nom+best_actress_win, data=movies_small)
+r.squared['audience_rating'] = summary(m6)$adj.r.squared
+
+# remove critics_score
+m7 = lm(audience_score ~ title_type+genre+runtime+studio+thtr_rel_year+dvd_rel_year+imdb_rating+audience_rating+best_pic_nom+best_actress_win, data=movies_small)
+r.squared['critics_score'] = summary(m7)$adj.r.squared
+
+
+# remove best_pic_nom
+m9 = lm(audience_score ~ title_type+genre+runtime+studio+thtr_rel_year+dvd_rel_year+imdb_rating+critics_score+audience_rating+best_actress_win, data=movies_small)
+r.squared['best_pic_nom'] = summary(m9)$adj.r.squared
+
+
+# remove best_actress_win
+m11 = lm(audience_score ~ title_type+genre+runtime+studio+thtr_rel_year+dvd_rel_year+imdb_rating+audience_rating+best_pic_nom, data=movies_small)
+r.squared['best_actress_win'] = summary(m11)$adj.r.squared
+
+
+
+which(r.squared == max(r.squared))
+r.squared
+```
+
+We remove critics_score
+
+```{r}
+
+#we update model target with model without critics score
+model_cible = m7
+#summary full model R squared = 0.8864514
+summary(model_cible)
+
+r.squared = c()
+
+# m1 remove title_type
+m1 = lm(audience_score ~ genre+runtime+mpaa_rating+studio+thtr_rel_year+dvd_rel_year+imdb_rating+audience_rating+best_pic_nom+best_actress_win, data=movies_small)
+r.squared['title_type'] = summary(m1)$adj.r.squared
+
+
+# m2 remove genre
+m2 = lm(audience_score ~ title_type+runtime+mpaa_rating+studio+thtr_rel_year+dvd_rel_year+imdb_rating+audience_rating+best_pic_nom+best_actress_win, data=movies_small)
+r.squared['genre'] = summary(m2)$adj.r.squared
+
+# remove runtime
+m3 = lm(audience_score ~ title_type+genre+mpaa_rating+studio+thtr_rel_year+dvd_rel_year+imdb_rating+audience_rating+best_pic_nom+best_actress_win, data=movies_small)
+r.squared['runtime'] = summary(m3)$adj.r.squared
+
+
+# remove imdb rating
+m4 = lm(audience_score ~ title_type+genre+runtime+studio+thtr_rel_year+dvd_rel_year+audience_rating+best_pic_nom+best_actress_win, data=movies_small)
+r.squared['imdb_rating'] = summary(m4)$adj.r.squared
+
+# remove audience_rating
+m6 = lm(audience_score ~ title_type+genre+runtime+studio+thtr_rel_year+dvd_rel_year+imdb_rating+best_pic_nom+best_actress_win, data=movies_small)
+r.squared['audience_rating'] = summary(m6)$adj.r.squared
+
+
+# remove best_pic_nom
+m9 = lm(audience_score ~ title_type+genre+runtime+studio+thtr_rel_year+dvd_rel_year+imdb_rating+audience_rating+best_actress_win, data=movies_small)
+r.squared['best_pic_nom'] = summary(m9)$adj.r.squared
+
+
+# remove best_actress_win
+m11 = lm(audience_score ~ title_type+genre+runtime+studio+thtr_rel_year+dvd_rel_year+imdb_rating+audience_rating+best_pic_nom, data=movies_small)
+r.squared['best_actress_win'] = summary(m11)$adj.r.squared
+
+
+
+which(r.squared == max(r.squared))
+r.squared
+```
+
+
+We cannot go further, without reducing adjusted R^2. 
+
+Remaining variable: 
+title_type
+genre
+runtime
+studio
+theater release year
+dvd release year
+imdb rating
+audience rating
+best picture nominated
+best actress wins
+```{r}
+
+#final model
+summary(model_cible)
+
+```
+
+Audience rating is obviously the variable the  most correlated with audiance score. Because it depends actually on the score. 
+
+
+* * *
+
+
+## Part 5: Prediction
+
+NOTE: Insert code chunks as needed by clicking on the "Insert a new code chunk" 
+button above. Make sure that your code is visible in the project you submit. 
+Delete this note when before you submit your work.
+
+* * *
+
+## Part 6: Conclusion
+
